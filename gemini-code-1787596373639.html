@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ລະບົບຄຸ້ມຄອງ ແລະ ກວດບົດສອນ - Lesson Plan System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Lao', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center border border-slate-200">
+            <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-lg shadow-indigo-500/30">
+                📚
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-1">ເຂົ້າສູ່ລະບົບກວດບົດສອນ</h2>
+            <p class="text-slate-500 text-sm mb-6">ເລືອກຊື່ຜູ້ໃຊ້ ແລະ ປ້ອນລະຫັດ PIN ປະຈຳຕົວ</p>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ເລືອກຜູ້ໃຊ້ / ຄູສອນ:</label>
+                    <select id="loginUserSelect" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700 bg-slate-50">
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ລະຫັດ PIN (6 ຫຼັກ):</label>
+                    <input type="password" id="loginPinInput" maxlength="6" required placeholder="••••••" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-center text-xl tracking-widest bg-slate-50">
+                </div>
+                <div id="loginError" class="text-red-500 text-xs hidden text-center font-medium">❌ ລະຫັດ PIN ບໍ່ຖືກຕ້ອງ!</div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg shadow-indigo-600/30 transition">
+                    ເຂົ້າສູ່ລະບົບ
+                </button>
+            </form>
+            <p class="text-xs text-slate-400 mt-6">* ລະຫັດ PIN ເລີ່ມຕົ້ນ: <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">1234</span></p>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="mainApp" class="hidden flex min-h-screen">
+
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 shadow-xl">
+            <div>
+                <div class="flex items-center gap-3 px-2 py-4 border-b border-slate-800 mb-6">
+                    <span class="text-3xl">🏫</span>
+                    <div>
+                        <h1 class="font-bold text-white text-base leading-tight">ລະບົບກວດບົດສອນ</h1>
+                        <span class="text-xs text-indigo-400 font-medium">ໂຮງຮຽນ 2026-2027</span>
+                    </div>
+                </div>
+
+                <!-- USER PROFILE CARD -->
+                <div class="bg-slate-800 rounded-xl p-3 mb-6 border border-slate-700/50">
+                    <div class="text-xs text-slate-400 mb-1">ຜູ້ໃຊ້ປະຈຸບັນ:</div>
+                    <div id="currentUserRole" class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">---</div>
+                    <div id="currentUserName" class="text-sm font-semibold text-white">---</div>
+                    <div id="currentUserSubject" class="text-xs text-slate-400 mt-1">---</div>
+                </div>
+
+                <!-- NAVIGATION -->
+                <nav class="space-y-1">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition bg-indigo-600 text-white">
+                        <span>📊</span> ພາບລວມ & ສະຖິຕິ
+                    </button>
+                    <button onclick="switchTab('lessons')" id="nav-lessons" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition">
+                        <span>📝</span> ລາຍການບົດສອນ
+                    </button>
+                    <button onclick="switchTab('upload')" id="nav-upload" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition">
+                        <span>📤</span> ອັບໂຫຼດບົດສອນ
+                    </button>
+                    
+                    <!-- ADMIN ONLY MENUS -->
+                    <div id="adminMenuBlock" class="pt-4 mt-4 border-t border-slate-800 space-y-1">
+                        <div class="text-xs font-bold text-slate-500 px-3 uppercase tracking-wider mb-2">ຈັດການລະບົບ (Admin)</div>
+                        <button onclick="switchTab('manage-users')" id="nav-manage-users" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition">
+                            <span>👥</span> ຈັດການຜູ້ໃຊ້ & ວິຊາສອນ
+                        </button>
+                        <button onclick="switchTab('manage-subjects')" id="nav-manage-subjects" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition">
+                            <span>📚</span> ຈັດການວິຊາ & ຊັ້ນຮຽນ
+                        </button>
+                        <button onclick="switchTab('drive-config')" id="nav-drive-config" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition text-amber-400">
+                            <span>⚙️</span> ຕັ້ງຄ່າ API Drive
+                        </button>
+                    </div>
+                </nav>
+            </div>
+
+            <button onclick="handleLogout()" class="flex items-center justify-center gap-2 w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium rounded-lg border border-red-500/20 transition">
+                🚪 ອອກຈາກລະບົບ
+            </button>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 p-8 overflow-y-auto">
+            
+            <!-- TAB 1: DASHBOARD -->
+            <section id="tab-dashboard" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">📊 ສະຖິຕິການສົ່ງບົດສອນ Realtime</h2>
+                        <p class="text-slate-500 text-sm">ພາບລວມການສົ່ງ ແລະ ການກວດບົດສອນ</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-xs font-bold text-slate-400 uppercase">ບົດສອນທັງໝົດ</div>
+                        <div id="statTotal" class="text-3xl font-extrabold text-slate-800 mt-2">0</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500">
+                        <div class="text-xs font-bold text-slate-400 uppercase">⏳ ລໍຖ້າອະນຸມັດ</div>
+                        <div id="statPending" class="text-3xl font-extrabold text-amber-600 mt-2">0</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
+                        <div class="text-xs font-bold text-slate-400 uppercase">✅ ອະນຸມັດທັງໝົດແລ້ວ</div>
+                        <div id="statApproved" class="text-3xl font-extrabold text-emerald-600 mt-2">0</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
+                        <div class="text-xs font-bold text-slate-400 uppercase">🔄 ແກ້ໄຂໃໝ່ແລ້ວ / ໃຫ້ແກ້</div>
+                        <div id="statRevision" class="text-3xl font-extrabold text-blue-600 mt-2">0</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-700 mb-4">ສະຖານະການກວດບົດສອນ</h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="chartStatus"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-700 mb-4">ຈຳນວນບົດສອນແຍກຕາມວິຊາ</h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="chartSubject"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: LESSON LIST -->
+            <section id="tab-lessons" class="space-y-6 hidden">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">📝 ລາຍການບົດສອນ</h2>
+                        <p class="text-slate-500 text-sm">ຕາຕະລາງຕິດຕາມ ແລະ ກວດກາບົດສອນ</p>
+                    </div>
+
+                    <!-- FILTER OPTIONS (Added Grade Filter) -->
+                    <div id="lessonFilters" class="flex flex-wrap gap-2 items-center bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-xs font-bold text-slate-500 px-2">🔍 ກັ່ນຕອງ:</span>
+                        <select id="filterGrade" onchange="renderLessons()" class="text-xs border border-slate-300 rounded-lg p-2 bg-slate-50 focus:ring-2 focus:ring-indigo-500 font-medium">
+                            <option value="ALL">-- ທຸກຊັ້ນຮຽນ --</option>
+                            <option value="ມ.1">ມ.1</option>
+                            <option value="ມ.2">ມ.2</option>
+                            <option value="ມ.3">ມ.3</option>
+                            <option value="ມ.4">ມ.4</option>
+                            <option value="ມ.5">ມ.5</option>
+                            <option value="ມ.6">ມ.6</option>
+                            <option value="ມ.7">ມ.7</option>
+                        </select>
+                        <select id="filterSubject" onchange="renderLessons()" class="text-xs border border-slate-300 rounded-lg p-2 bg-slate-50 focus:ring-2 focus:ring-indigo-500 font-medium">
+                            <option value="ALL">-- ທຸກວິຊາ --</option>
+                        </select>
+                        <select id="filterTeacher" onchange="renderLessons()" class="text-xs border border-slate-300 rounded-lg p-2 bg-slate-50 focus:ring-2 focus:ring-indigo-500 font-medium">
+                            <option value="ALL">-- ທຸກຄູສອນ --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                                    <th class="p-4">ວິຊາ / ຊັ້ນຮຽນ</th>
+                                    <th class="p-4">ຫົວຂໍ້ບົດສອນ</th>
+                                    <th class="p-4">ຄູຜູ້ສົ່ງ</th>
+                                    <th class="p-4">ວັນທີສົ່ງ</th>
+                                    <th class="p-4">ສະຖານະການອະນຸມັດ</th>
+                                    <th class="p-4 text-center">ການດຳເນີນການ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lessonTableBody" class="divide-y divide-slate-100 text-sm">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: UPLOAD LESSON -->
+            <section id="tab-upload" class="space-y-6 hidden">
+                <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">📤 ອັບໂຫຼດບົດສອນໃໝ່</h2>
+                    <p class="text-slate-500 text-sm mb-6">ລະບົບຈະຈັດ Folder ຕາມ: <b>ຊື່ວິຊາ > Sub-folder ຊັ້ນຮຽນ > Sub-folder ຊື່ຄູສອນ</b> ອັດໂນມັດ</p>
+
+                    <form id="uploadForm" onsubmit="handleUploadLesson(event)" class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ວິຊາຮຽນ (ສະແດງສະເພາະວິຊາທີ່ທ່ານສອນ):</label>
+                            <select id="uploadSubjectSelect" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ຊັ້ນຮຽນ:</label>
+                            <select id="uploadGradeSelect" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ຫົວຂໍ້ບົດສອນ / ບົດທີ:</label>
+                            <input type="text" id="uploadTitle" required placeholder="ຕົວຢ່າງ: ບົດທີ 1..." class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <!-- UPLOAD METHOD SELECTOR SWITCH -->
+                        <div class="pt-2 border-t border-slate-100">
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">ເລືອກຮູບແບບການສົ່ງບົດສອນ:</label>
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <button type="button" onclick="setUploadMode('link')" id="btnModeLink" class="py-2.5 px-3 rounded-lg border-2 border-indigo-600 text-indigo-600 font-bold text-xs flex items-center justify-center gap-2 bg-indigo-50/50">
+                                    🔗 ວາງລິ້ງ Google Doc/Drive
+                                </button>
+                                <button type="button" onclick="setUploadMode('file')" id="btnModeFile" class="py-2.5 px-3 rounded-lg border-2 border-slate-200 text-slate-500 font-medium text-xs flex items-center justify-center gap-2">
+                                    💻 ອັບໂຫຼດໄຟລ໌ຈາກຄອມພິວເຕີ
+                                </button>
+                            </div>
+
+                            <!-- MODE 1: LINK INPUT -->
+                            <div id="uploadModeLinkBlock">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">ລິ້ງໄຟລ໌ເອກະສານໃນ Google Drive / Doc (URL):</label>
+                                <input type="url" id="uploadDriveUrl" placeholder="https://docs.google.com/document/d/..." class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+
+                            <!-- MODE 2: COMPUTER FILE INPUT -->
+                            <div id="uploadModeFileBlock" class="hidden">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">ເລືອກໄຟລ໌ເອກະສານ (.pdf, .docx, .pptx):</label>
+                                <div class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-6 text-center bg-slate-50 transition cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                                    <span class="text-3xl block mb-2">📁</span>
+                                    <span id="fileNameDisplay" class="text-sm font-semibold text-slate-600">ກົດເພື່ອເລືອກໄຟລ໌ຈາກຄອມພິວເຕີ</span>
+                                    <span class="text-xs text-slate-400 block mt-1">ຮອງຮັບໄຟລ໌ PDF, Word, PowerPoint</span>
+                                    <input type="file" id="fileInput" class="hidden" onchange="handleFileSelect(event)" accept=".pdf,.doc,.docx,.ppt,.pptx">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="btnSubmitUpload" type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg shadow-indigo-600/30 transition">
+                            🚀 ສົ່ງບົດສອນ
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TAB 4: MANAGE USERS (ADMIN) -->
+            <section id="tab-manage-users" class="space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">👥 ຈັດການຜູ້ໃຊ້ & ວິຊາສອນ</h2>
+                        <p class="text-slate-500 text-sm">ເພີ່ມ, ແກ້ໄຂ, ຕັ້ງຄ່າວິຊາທີ່ຄູສອນໄດ້ ແລະ ກຳນົດລະຫັດ PIN</p>
+                    </div>
+                    <button onclick="openUserModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-lg shadow transition">
+                        ➕ ເພີ່ມຜູ້ໃຊ້ໃໝ່
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                                <th class="p-4">ຊື່ ແລະ ນາມສະກຸນ</th>
+                                <th class="p-4">ບົດບາດ / ຕຳແໜ່ງ</th>
+                                <th class="p-4">ວິຊາທີ່ສອນໄດ້ / ສິດກວດວິຊາ</th>
+                                <th class="p-4">ລະຫັດ PIN</th>
+                                <th class="p-4 text-center">ການດຳເນີນການ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="divide-y divide-slate-100 text-sm">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 5: MANAGE SUBJECTS (ADMIN) -->
+            <section id="tab-manage-subjects" class="space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">📚 ຈັດການວິຊາ & ຊັ້ນຮຽນ</h2>
+                        <p class="text-slate-500 text-sm">ກຳນົດ, ເພີ່ມ, ລົບ ແລະ ບັນທຶກລາຍຊື່ວິຊາຮຽນໃນໂຮງຮຽນ</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveSubjectsToStorage()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center gap-1">
+                            💾 ບັນທຶກຂໍ້ມູນວິຊາ
+                        </button>
+                        <button onclick="openAddSubjectModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-lg shadow transition">
+                            ➕ ເພີ່ມວິຊາໃໝ່
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <div id="subjectBadgeList" class="flex flex-wrap gap-3">
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: GOOGLE DRIVE API CONFIG (ADMIN SETTING) -->
+            <section id="tab-drive-config" class="space-y-6 hidden">
+                <div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                        <span class="text-3xl">⚙️</span>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800">ຕັ້ງຄ່າເຊື່ອມຕໍ່ Google Drive API</h2>
+                            <p class="text-slate-500 text-sm">ກຳນົດ Apps Script Web App URL ແລະ Folder ID ສຳລັບຈັດໝວດໝູ່ໂຟເດີອັດໂນມັດ</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="handleSaveDriveConfig(event)" class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">1. Apps Script Web App URL:</label>
+                            <input type="text" id="cfgScriptUrl" required placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">2. Google Drive Root Folder ID:</label>
+                            <input type="text" id="cfgFolderId" required placeholder="1A2B3C4D5E6F7G8H9I0J..." class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
+                        </div>
+
+                        <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
+                            💡 <strong>ໂຄງສ້າງໂຟເດີໃນ Drive:</strong><br>
+                            <code>ໂຟເດີຫຼັກ ➔ [Folder ວິຊາ] ➔ [Sub-folder ຊັ້ນຮຽນ] ➔ [Sub-folder ຊື່ຄູສອນ] ➔ ໄຟລ໌ບົດສອນ</code>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-lg shadow-amber-600/30 transition">
+                            💾 ບັນທຶກການຕັ້ງຄ່າ API
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL: ADD / EDIT USER -->
+    <div id="userModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 id="userModalTitle" class="text-xl font-bold text-slate-800">👤 ຈັດການຂໍ້ມູນຜູ້ໃຊ້</h3>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+            </div>
+
+            <form id="userForm" onsubmit="handleSaveUser(event)" class="space-y-4">
+                <input type="hidden" id="modalUserId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ຊື່ ແລະ ນາມສະກຸນ:</label>
+                    <input type="text" id="modalUserName" required placeholder="ຕົວຢ່າງ: ອາຈານ ສົມຊາຍ ວົງສະຫວັນ" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ບົດບາດ / ຕຳແໜ່ງ:</label>
+                    <select id="modalUserRole" onchange="toggleSubjectSelectionUI()" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm">
+                        <option value="Teacher">ຄູສອນ (Teacher)</option>
+                        <option value="Head">ຫົວໜ້າວິຊາ (Head)</option>
+                        <option value="Academic">ວິຊາການ (Academic)</option>
+                        <option value="Director">ຜູ້ອຳນວຍການ (Director)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ລະຫັດ PIN (6 ຫຼັກ):</label>
+                    <input type="text" id="modalUserPin" maxlength="6" required placeholder="1234" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
+                </div>
+
+                <div id="subjectSelectionContainer">
+                    <label id="subjectSelectionLabel" class="block text-xs font-semibold text-slate-600 mb-1">ເລືອກວິຊາທີ່ສອນໄດ້ (ເລືອກໄດ້ຫຼາຍວິຊາ):</label>
+                    <div id="subjectCheckboxGroup" class="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg max-h-40 overflow-y-auto">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeUserModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm rounded-lg transition">
+                        ຍົກເລີກ
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-lg shadow transition">
+                        💾 ບັນທຶກຜູ້ໃຊ້
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REVIEW LESSON -->
+    <div id="reviewModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+                <div>
+                    <span id="modalSubjectBadge" class="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">---</span>
+                    <h3 id="modalTitle" class="text-xl font-bold text-slate-800 mt-2">---</h3>
+                    <p id="modalTeacher" class="text-xs text-slate-500">---</p>
+                </div>
+                <button onclick="closeReviewModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+            </div>
+
+            <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-between">
+                <div class="text-xs text-indigo-900 font-medium">
+                    📁 ໄຟລ໌ເອກະສານບົດສອນ
+                </div>
+                <a id="modalDriveLink" href="#" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow flex items-center gap-2 transition">
+                    👁️ ເປີດເບິ່ງ / ດາວໂຫຼດໄຟລ໌
+                </a>
+            </div>
+
+            <!-- APPROVAL STEPS HISTORY DISPLAY -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">📜 ປະຫວັດການອະນຸມັດ ແລະ ຄຳເຫັນ:</h4>
+                <div id="modalApprovalHistory" class="space-y-2 text-xs">
+                </div>
+            </div>
+
+            <!-- COMMENT INPUT SECTION FOR CURRENT REVIEWER -->
+            <div id="modalCommentSection">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">ຄຳເຫັນ / ຈຸດທີ່ຕ້ອງໃຫ້ແກ້ໄຂ (ສຳລັບທ່ານ):</label>
+                <textarea id="modalComment" rows="2" class="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="ໃສ່ຄຳເຫັນ ຫຼື ຄຳແນະນຳ..."></textarea>
+            </div>
+
+            <!-- ACTION BUTTONS FOR APPROVERS -->
+            <div id="modalAdminActions" class="flex gap-3 pt-2">
+                <button onclick="submitReview('Needs Revision')" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-lg shadow transition">
+                    🔄 ໃຫ້ແກ້ໄຂແລ້ວສົ່ງໃໝ່
+                </button>
+                <button id="btnApproveAction" onclick="submitReview('Approved')" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow transition">
+                    ✅ ອະນຸມັດບົດສອນ
+                </button>
+            </div>
+
+            <!-- TEACHER ACTION BUTTONS -->
+            <div id="modalTeacherActions" class="pt-2 hidden space-y-3">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                    💡 ຄູສອນສາມາດເບິ່ງຄອມເມັ້ນ, ດາວໂຫຼດໄຟລ໌ໄປແກ້ໄຂ ແລ້ວກົດສົ່ງບົດສອນທີ່ແກ້ໄຂໃໝ່ໄດ້ຢູ່ບ່ອນນີ້.
+                </div>
+                <button onclick="resubmitRevisedLesson()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow transition flex items-center justify-center gap-2">
+                    🔄 ສົ່ງບົດສອນທີ່ແກ້ໄຂໃໝ່ແລ້ວ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS APPLICATION LOGIC -->
+    <script>
+        let users = JSON.parse(localStorage.getItem('USERS_DATA')) || [
+            { id: '1', name: 'ອາຈານ ສົມຊາຍ ວົງສະຫວັນ', role: 'Director', managedSubjects: ['ALL'], pin: '1234' },
+            { id: '2', name: 'ອາຈານ ດາວວອນ ໄຊຍະເສນ', role: 'Academic', managedSubjects: ['ALL'], pin: '1234' },
+            { id: '3', name: 'ອາຈານ ສົມໂພດ ແກ້ວມະນີ', role: 'Head', managedSubjects: ['ຄະນິດສາດ', 'ICT'], pin: '1234' },
+            { id: '4', name: 'ອາຈານ ບຸນມີ ວົງສະຫວັນ', role: 'Teacher', managedSubjects: ['ພາສາລາວ'], pin: '1234' }
+        ];
+
+        let subjects = JSON.parse(localStorage.getItem('SUBJECTS_DATA')) || ['ຄະນິດສາດ', 'ພາສາລາວ', 'ວິທະຍາສາດ', 'ພາສາອັງກິດ', 'ICT', 'ປະຫວັດສາດ'];
+        let grades = ['ມ.1', 'ມ.2', 'ມ.3', 'ມ.4', 'ມ.5', 'ມ.6', 'ມ.7'];
+
+        let driveConfig = {
+            scriptUrl: localStorage.getItem('APPS_SCRIPT_URL') || '',
+            folderId: localStorage.getItem('DRIVE_FOLDER_ID') || ''
+        };
+
+        let currentUploadMode = 'link';
+        let selectedFile = null;
+
+        let lessons = JSON.parse(localStorage.getItem('LESSONS_DATA')) || [
+            { 
+                id: 'L1', 
+                title: 'ບົດທີ 1 ເລກກຳລັງ', 
+                subject: 'ຄະນິດສາດ', 
+                grade: 'ມ.1', 
+                teacher: 'ອາຈານ ສົມໂພດ ແກ້ວມະນີ', 
+                driveUrl: 'https://drive.google.com', 
+                date: '2026-08-23', 
+                isNeedsRevision: false,
+                approvals: { head: false, academic: false, director: false },
+                comments: { head: '', academic: '', director: '' }
+            },
+            { 
+                id: 'L2', 
+                title: 'ບົດທີ 2 ວັດທະນະທຳລາວ', 
+                subject: 'ພາສາລາວ', 
+                grade: 'ມ.2', 
+                teacher: 'ອາຈານ ບຸນມີ ວົງສະຫວັນ', 
+                driveUrl: 'https://drive.google.com', 
+                date: '2026-08-22', 
+                isNeedsRevision: false,
+                approvals: { head: true, academic: true, director: true },
+                comments: { head: 'ດີຫຼາຍ', academic: 'ເຫັນດີ', director: 'ອະນຸມັດ' }
+            }
+        ];
+
+        let currentUser = null;
+        let activeModalLessonId = null;
+        let chartStatusInstance = null;
+        let chartSubjectInstance = null;
+
+        window.onload = function() {
+            populateUserDropdown();
+            populateSubjectSelects();
+            document.getElementById('cfgScriptUrl').value = driveConfig.scriptUrl;
+            document.getElementById('cfgFolderId').value = driveConfig.folderId;
+        };
+
+        function saveSubjectsToStorage() {
+            localStorage.setItem('SUBJECTS_DATA', JSON.stringify(subjects));
+            alert('💾 ບັນທຶກຂໍ້ມູນວິຊາຮຽນສຳເລັດແລ້ວ!');
+        }
+
+        function saveUsersToStorage() {
+            localStorage.setItem('USERS_DATA', JSON.stringify(users));
+        }
+
+        function populateUserDropdown() {
+            const select = document.getElementById('loginUserSelect');
+            select.innerHTML = users.map(u => `<option value="${u.id}">${u.name} (${getRoleLabel(u.role)})</option>`).join('');
+        }
+
+        function populateSubjectSelects() {
+            const subSelect = document.getElementById('uploadSubjectSelect');
+            let allowedSubs = subjects;
+            if (currentUser && (currentUser.role === 'Teacher' || currentUser.role === 'Head')) {
+                allowedSubs = currentUser.managedSubjects || [];
+            }
+            subSelect.innerHTML = allowedSubs.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            const grdSelect = document.getElementById('uploadGradeSelect');
+            grdSelect.innerHTML = grades.map(g => `<option value="${g}">${g}</option>`).join('');
+
+            const badgeContainer = document.getElementById('subjectBadgeList');
+            badgeContainer.innerHTML = subjects.map(s => `
+                <div class="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold rounded-lg flex items-center gap-2">
+                    <span>📚 ${s}</span>
+                    <button onclick="deleteSubject('${s}')" class="text-red-500 hover:text-red-700 hover:bg-red-100 rounded p-0.5 ml-1 transition" title="ລົບວິຊານີ້">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function populateFilterDropdowns() {
+            const subFilter = document.getElementById('filterSubject');
+            const teacherFilter = document.getElementById('filterTeacher');
+
+            subFilter.innerHTML = `<option value="ALL">-- ທຸກວິຊາ --</option>` + subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+            
+            const teacherNames = [...new Set(users.map(u => u.name))];
+            teacherFilter.innerHTML = `<option value="ALL">-- ທຸກຄູສອນ --</option>` + teacherNames.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
+
+        function getRoleLabel(role) {
+            switch(role) {
+                case 'Director': return 'ຜູ້ອຳນວຍການ';
+                case 'Academic': return 'ວິຊາການ';
+                case 'Head': return 'ຫົວໜ້າວິຊາ';
+                default: return 'ຄູສອນ';
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const userId = document.getElementById('loginUserSelect').value;
+            const pin = document.getElementById('loginPinInput').value;
+
+            const user = users.find(u => u.id === userId);
+            if (user && user.pin === pin) {
+                currentUser = user;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                
+                document.getElementById('currentUserName').innerText = user.name;
+                document.getElementById('currentUserRole').innerText = getRoleLabel(user.role);
+                
+                let subLabel = (user.role === 'Director' || user.role === 'Academic') 
+                    ? 'ທຸກວິຊາ' 
+                    : `ວິຊາ: ${(user.managedSubjects || []).join(', ')}`;
+                document.getElementById('currentUserSubject').innerText = subLabel;
+
+                if (user.role === 'Director' || user.role === 'Academic') {
+                    document.getElementById('adminMenuBlock').classList.remove('hidden');
+                } else {
+                    document.getElementById('adminMenuBlock').classList.add('hidden');
+                }
+
+                populateSubjectSelects();
+                populateFilterDropdowns();
+                renderDashboard();
+                renderLessons();
+                renderUsersTable();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginPinInput').value = '';
+        }
+
+        function switchTab(tabId) {
+            ['dashboard', 'lessons', 'upload', 'manage-users', 'manage-subjects', 'drive-config'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        }
+
+        function setUploadMode(mode) {
+            currentUploadMode = mode;
+            const btnLink = document.getElementById('btnModeLink');
+            const btnFile = document.getElementById('btnModeFile');
+            const blockLink = document.getElementById('uploadModeLinkBlock');
+            const blockFile = document.getElementById('uploadModeFileBlock');
+
+            if (mode === 'link') {
+                btnLink.className = "py-2.5 px-3 rounded-lg border-2 border-indigo-600 text-indigo-600 font-bold text-xs flex items-center justify-center gap-2 bg-indigo-50/50";
+                btnFile.className = "py-2.5 px-3 rounded-lg border-2 border-slate-200 text-slate-500 font-medium text-xs flex items-center justify-center gap-2";
+                blockLink.classList.remove('hidden');
+                blockFile.classList.add('hidden');
+            } else {
+                btnFile.className = "py-2.5 px-3 rounded-lg border-2 border-indigo-600 text-indigo-600 font-bold text-xs flex items-center justify-center gap-2 bg-indigo-50/50";
+                btnLink.className = "py-2.5 px-3 rounded-lg border-2 border-slate-200 text-slate-500 font-medium text-xs flex items-center justify-center gap-2";
+                blockFile.classList.remove('hidden');
+                blockLink.classList.add('hidden');
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('fileNameDisplay').innerHTML = `✅ ເລືອກໄຟລ໌ແລ້ວ: <span class="text-indigo-600">${file.name}</span> (${(file.size/1024/1024).toFixed(2)} MB)`;
+            }
+        }
+
+        function handleUploadLesson(e) {
+            e.preventDefault();
+            const subject = document.getElementById('uploadSubjectSelect').value;
+            const grade = document.getElementById('uploadGradeSelect').value;
+            const title = document.getElementById('uploadTitle').value;
+            const submitBtn = document.getElementById('btnSubmitUpload');
+
+            if (!subject) return alert('ກະລຸນາເລືອກວິຊາຮຽນ!');
+
+            if (currentUploadMode === 'link') {
+                const finalUrl = document.getElementById('uploadDriveUrl').value;
+                if (!finalUrl) return alert('ກະລຸນາວາງລິ້ງ Google Drive/Doc');
+
+                saveNewLesson(subject, grade, title, finalUrl);
+            } else {
+                if (!selectedFile) return alert('ກະລຸນາເລືອກໄຟລ໌ຈາກຄອມພິວເຕີກ່ອນ');
+                if (!driveConfig.scriptUrl || !driveConfig.folderId) return alert('ກະລຸນາຕັ້ງຄ່າ Apps Script URL ແລະ Folder ID ໃນໜ້າຕັ້ງຄ່າ API Drive ກ່ອນ!');
+
+                submitBtn.disabled = true;
+                submitBtn.innerText = "⏳ ກຳລັງອັບໂຫຼດ ແລະ ຈັດໝວດໝູ່ໂຟເດີ...";
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const payload = {
+                        folderId: driveConfig.folderId,
+                        subjectName: subject,
+                        gradeName: grade,
+                        teacherName: currentUser.name,
+                        fileName: `${subject}_${grade}_${title}_${selectedFile.name}`,
+                        mimeType: selectedFile.type,
+                        fileData: event.target.result
+                    };
+
+                    fetch(driveConfig.scriptUrl, {
+                        method: "POST",
+                        body: JSON.stringify(payload)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "🚀 ສົ່ງບົດສອນ";
+                        if (data.status === "success") {
+                            saveNewLesson(subject, grade, title, data.fileUrl);
+                        } else {
+                            alert("ເກີດຂໍ້ຜິດພາດໃນການອັບໂຫຼດ: " + data.message);
+                        }
+                    })
+                    .catch(err => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "🚀 ສົ່ງບົດສອນ";
+                        alert("ເກີດຂໍ້ຜິດພາດໃນການເຊື່ອມຕໍ່: " + err.message);
+                    });
+                };
+                reader.readAsDataURL(selectedFile);
+            }
+        }
+
+        function saveNewLesson(subject, grade, title, fileUrl) {
+            const existingIndex = lessons.findIndex(l => l.title === title && l.teacher === currentUser.name && l.subject === subject);
+            
+            if (existingIndex !== -1) {
+                lessons[existingIndex].driveUrl = fileUrl;
+                lessons[existingIndex].grade = grade;
+                lessons[existingIndex].isNeedsRevision = false;
+                lessons[existingIndex].approvals = { head: false, academic: false, director: false };
+                lessons[existingIndex].comments = { head: '', academic: '', director: '' };
+                lessons[existingIndex].date = new Date().toISOString().split('T')[0];
+                alert(`🔄 ອັບເດດບົດສອນ ແລະ ຣີເຊັດສະຖານະເປັນ "ລໍຖ້າອະນຸມັດ" ເພື່ອໃຫ້ກວດໃໝ່!`);
+            } else {
+                const newLesson = {
+                    id: 'L' + (lessons.length + 1),
+                    subject: subject,
+                    grade: grade,
+                    title: title,
+                    driveUrl: fileUrl,
+                    teacher: currentUser.name,
+                    isNeedsRevision: false,
+                    approvals: { head: false, academic: false, director: false },
+                    comments: { head: '', academic: '', director: '' },
+                    date: new Date().toISOString().split('T')[0]
+                };
+                lessons.unshift(newLesson);
+                alert(`🚀 ອັບໂຫຼດບົດສອນສຳເລັດແລ້ວ!`);
+            }
+
+            localStorage.setItem('LESSONS_DATA', JSON.stringify(lessons));
+            
+            document.getElementById('uploadForm').reset();
+            selectedFile = null;
+            document.getElementById('fileNameDisplay').innerText = "ກົດເພື່ອເລືອກໄຟລ໌ຈາກຄອມພິວເຕີ";
+            
+            switchTab('lessons');
+            renderLessons();
+            renderDashboard();
+        }
+
+        function handleSaveDriveConfig(e) {
+            e.preventDefault();
+            driveConfig.scriptUrl = document.getElementById('cfgScriptUrl').value.trim();
+            driveConfig.folderId = document.getElementById('cfgFolderId').value.trim();
+            
+            localStorage.setItem('APPS_SCRIPT_URL', driveConfig.scriptUrl);
+            localStorage.setItem('DRIVE_FOLDER_ID', driveConfig.folderId);
+
+            alert('💾 ບັນທຶກການຕັ້ງຄ່າ API ສຳເລັດແລ້ວ!');
+        }
+
+        function getFilteredLessons() {
+            if (!currentUser) return [];
+
+            let list = [];
+            if (currentUser.role === 'Director' || currentUser.role === 'Academic') {
+                list = lessons;
+            } else if (currentUser.role === 'Head') {
+                list = lessons.filter(l => (currentUser.managedSubjects || []).includes(l.subject));
+            } else {
+                list = lessons.filter(l => l.teacher === currentUser.name);
+            }
+
+            const gradeVal = document.getElementById('filterGrade') ? document.getElementById('filterGrade').value : 'ALL';
+            const subVal = document.getElementById('filterSubject') ? document.getElementById('filterSubject').value : 'ALL';
+            const teacherVal = document.getElementById('filterTeacher') ? document.getElementById('filterTeacher').value : 'ALL';
+
+            if (gradeVal !== 'ALL') {
+                list = list.filter(l => l.grade === gradeVal);
+            }
+            if (subVal !== 'ALL') {
+                list = list.filter(l => l.subject === subVal);
+            }
+            if (teacherVal !== 'ALL') {
+                list = list.filter(l => l.teacher === teacherVal);
+            }
+
+            return list;
+        }
+
+        function renderDashboard() {
+            const visibleLessons = getFilteredLessons();
+
+            document.getElementById('statTotal').innerText = visibleLessons.length;
+            document.getElementById('statPending').innerText = visibleLessons.filter(l => !l.approvals.director && !l.isNeedsRevision).length;
+            document.getElementById('statApproved').innerText = visibleLessons.filter(l => l.approvals.head && l.approvals.academic && l.approvals.director).length;
+            document.getElementById('statRevision').innerText = visibleLessons.filter(l => l.isNeedsRevision).length;
+
+            initCharts(visibleLessons);
+        }
+
+        function initCharts(data) {
+            if (chartStatusInstance) chartStatusInstance.destroy();
+            if (chartSubjectInstance) chartSubjectInstance.destroy();
+
+            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+            chartStatusInstance = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ອະນຸມັດທັງໝົດ', 'ລໍຖ້າອະນຸມັດ', 'ໃຫ້ແກ້ໄຂ'],
+                    datasets: [{
+                        data: [
+                            data.filter(l => l.approvals.head && l.approvals.academic && l.approvals.director).length,
+                            data.filter(l => !l.approvals.director && !l.isNeedsRevision).length,
+                            data.filter(l => l.isNeedsRevision).length
+                        ],
+                        backgroundColor: ['#10b981', '#f59e0b', '#f43f5e']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            const ctxSub = document.getElementById('chartSubject').getContext('2d');
+            chartSubjectInstance = new Chart(ctxSub, {
+                type: 'bar',
+                data: {
+                    labels: subjects,
+                    datasets: [{
+                        label: 'ຈຳນວນບົດສອນ',
+                        data: subjects.map(s => data.filter(l => l.subject === s).length),
+                        backgroundColor: '#6366f1'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function renderLessons() {
+            const tbody = document.getElementById('lessonTableBody');
+            const visibleLessons = getFilteredLessons();
+
+            if (visibleLessons.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">ບໍ່ມີຂໍ້ມູນບົດສອນຕາມເງື່ອນໄຂທີ່ເລືອກ</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = visibleLessons.map(l => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4"><span class="font-bold text-indigo-600">${l.subject}</span> (${l.grade})</td>
+                    <td class="p-4 font-semibold text-slate-800">${l.title}</td>
+                    <td class="p-4 text-slate-600">${l.teacher}</td>
+                    <td class="p-4 text-slate-500 text-xs">${l.date}</td>
+                    <td class="p-4">${getStatusBadge(l)}</td>
+                    <td class="p-4 text-center space-x-1">
+                        <button onclick="openReviewModal('${l.id}')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-xs rounded-md transition">
+                            👁️ ກວດກາ
+                        </button>
+                        <button onclick="deleteLesson('${l.id}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-md transition" title="ລົບລາຍການນີ້">
+                            🗑️ ລົບ
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ຟັງຊັນລົບລາຍການບົດສອນ
+        function deleteLesson(lessonId) {
+            if (confirm('ທ່ານຕ້ອງການລົບລາຍການບົດສອນນີ້ອອກຈາກລະບົບແທ້ບໍ?')) {
+                lessons = lessons.filter(l => l.id !== lessonId);
+                localStorage.setItem('LESSONS_DATA', JSON.stringify(lessons));
+                renderLessons();
+                renderDashboard();
+            }
+        }
+
+        function getStatusBadge(lesson) {
+            if (!lesson.approvals) {
+                lesson.approvals = { head: false, academic: false, director: false };
+            }
+
+            if (lesson.isNeedsRevision) {
+                return `<span class="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full">🔄 ໃຫ້ແກ້ໄຂ</span>`;
+            }
+
+            const { head, academic, director } = lesson.approvals;
+
+            if (head && academic && director) {
+                return `<span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">✅ ອະນຸມັດທັງໝົດ</span>`;
+            }
+            if (head && academic && !director) {
+                return `<span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">ລໍຖ້າ ຜູ້ອຳນວຍການ</span>`;
+            }
+            if (head && !academic) {
+                return `<span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">ລໍຖ້າ ວິຊາການ</span>`;
+            }
+            return `<span class="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">⏳ ລໍຖ້າອະນຸມັດ</span>`;
+        }
+
+        function openReviewModal(lessonId) {
+            const lesson = lessons.find(l => l.id === lessonId);
+            if (!lesson) return;
+
+            if (!lesson.approvals) lesson.approvals = { head: false, academic: false, director: false };
+            if (!lesson.comments) lesson.comments = { head: '', academic: '', director: '' };
+
+            activeModalLessonId = lessonId;
+            document.getElementById('modalSubjectBadge').innerText = `${lesson.subject} (${lesson.grade})`;
+            document.getElementById('modalTitle').innerText = lesson.title;
+            document.getElementById('modalTeacher').innerText = `ຜູ້ສົ່ງ: ${lesson.teacher} | ວັນທີ: ${lesson.date}`;
+            document.getElementById('modalDriveLink').href = lesson.driveUrl;
+
+            const historyContainer = document.getElementById('modalApprovalHistory');
+            historyContainer.innerHTML = `
+                <div class="flex items-center justify-between p-2 rounded ${lesson.approvals.head ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+                    <span>1. ຫົວໜ້າວິຊາ: <b>${lesson.approvals.head ? '✅ ອະນຸມັດແລ້ວ' : '⏳ ລໍຖ້າ'}</b></span>
+                    <span class="text-slate-500 text-[11px]">${lesson.comments.head ? '💬 "' + lesson.comments.head + '"' : ''}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded ${lesson.approvals.academic ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+                    <span>2. ວິຊາການ: <b>${lesson.approvals.academic ? '✅ ອະນຸມັດແລ້ວ' : '⏳ ລໍຖ້າ'}</b></span>
+                    <span class="text-slate-500 text-[11px]">${lesson.comments.academic ? '💬 "' + lesson.comments.academic + '"' : ''}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded ${lesson.approvals.director ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+                    <span>3. ຜູ້ອຳນວຍການ: <b>${lesson.approvals.director ? '✅ ອະນຸມັດແລ້ວ' : '⏳ ລໍຖ້າ'}</b></span>
+                    <span class="text-slate-500 text-[11px]">${lesson.comments.director ? '💬 "' + lesson.comments.director + '"' : ''}</span>
+                </div>
+            `;
+
+            const isTeacherRole = (currentUser.role === 'Teacher');
+            const adminActions = document.getElementById('modalAdminActions');
+            const teacherActions = document.getElementById('modalTeacherActions');
+            const commentSection = document.getElementById('modalCommentSection');
+            const commentInput = document.getElementById('modalComment');
+
+            if (isTeacherRole) {
+                commentSection.classList.add('hidden');
+                adminActions.classList.add('hidden');
+                teacherActions.classList.remove('hidden');
+            } else {
+                commentSection.classList.remove('hidden');
+                adminActions.classList.remove('hidden');
+                teacherActions.classList.add('hidden');
+
+                if (currentUser.role === 'Head') commentInput.value = lesson.comments.head || '';
+                else if (currentUser.role === 'Academic') commentInput.value = lesson.comments.academic || '';
+                else if (currentUser.role === 'Director') commentInput.value = lesson.comments.director || '';
+                else commentInput.value = '';
+            }
+
+            document.getElementById('reviewModal').classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+        }
+
+        function submitReview(actionType) {
+            if (currentUser.role === 'Teacher') {
+                alert('❌ ຄູປະຈຳວິຊາ (Teacher) ບໍ່ມີສິດກົດອະນຸມັດ!');
+                return;
+            }
+
+            const lesson = lessons.find(l => l.id === activeModalLessonId);
+            if (!lesson) return;
+
+            const commentText = document.getElementById('modalComment').value.trim();
+
+            if (actionType === 'Needs Revision') {
+                lesson.isNeedsRevision = true;
+                if (currentUser.role === 'Head') lesson.comments.head = commentText || 'ໃຫ້ແກ້ໄຂ';
+                if (currentUser.role === 'Academic') lesson.comments.academic = commentText || 'ໃຫ້ແກ້ໄຂ';
+                if (currentUser.role === 'Director') lesson.comments.director = commentText || 'ໃຫ້ແກ້ໄຂ';
+            } else if (actionType === 'Approved') {
+                lesson.isNeedsRevision = false;
+                if (currentUser.role === 'Head') {
+                    lesson.approvals.head = true;
+                    lesson.comments.head = commentText || 'ອະນຸມັດແລ້ວ';
+                } else if (currentUser.role === 'Academic') {
+                    lesson.approvals.academic = true;
+                    lesson.comments.academic = commentText || 'ອະນຸມັດແລ້ວ';
+                } else if (currentUser.role === 'Director') {
+                    lesson.approvals.director = true;
+                    lesson.comments.director = commentText || 'ອະນຸມັດແລ້ວ';
+                }
+            }
+
+            localStorage.setItem('LESSONS_DATA', JSON.stringify(lessons));
+            closeReviewModal();
+            renderLessons();
+            renderDashboard();
+        }
+
+        function resubmitRevisedLesson() {
+            const lesson = lessons.find(l => l.id === activeModalLessonId);
+            if (lesson) {
+                closeReviewModal();
+                switchTab('upload');
+                
+                document.getElementById('uploadSubjectSelect').value = lesson.subject;
+                document.getElementById('uploadGradeSelect').value = lesson.grade;
+                document.getElementById('uploadTitle').value = lesson.title;
+                
+                alert(`📝 ລະບົບໄດ້ຕັ້ງຄ່າຂໍ້ມູນບົດສອນ "${lesson.title}" ໃຫ້ແລ້ວ. ກະລຸນາເລືອກໄຟລ໌ແລ້ວກົດ "ສົ່ງບົດສອນ"!`);
+            }
+        }
+
+        function renderUsersTable() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = users.map(u => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 font-bold text-slate-800">${u.name}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">${getRoleLabel(u.role)}</span></td>
+                    <td class="p-4 text-slate-600 text-xs">
+                        ${(u.role === 'Director' || u.role === 'Academic') ? '<span class="text-indigo-600 font-bold">ທຸກວິຊາ</span>' : (u.managedSubjects || []).join(', ')}
+                    </td>
+                    <td class="p-4 font-mono text-xs font-bold text-indigo-600">${u.pin}</td>
+                    <td class="p-4 text-center space-x-2">
+                        <button onclick="openUserModal('${u.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs">✏️ ແກ້ໄຂ</button>
+                        <button onclick="deleteUser('${u.id}')" class="text-rose-500 hover:text-rose-700 font-bold text-xs">🗑️ ລົບ</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleSubjectSelectionUI() {
+            const role = document.getElementById('modalUserRole').value;
+            const container = document.getElementById('subjectSelectionContainer');
+            const label = document.getElementById('subjectSelectionLabel');
+
+            if (role === 'Director' || role === 'Academic') {
+                container.classList.add('hidden');
+            } else {
+                container.classList.remove('hidden');
+                label.innerText = role === 'Head' ? 'ເລືອກວິຊາທີ່ຮັບຜິດຊອບກວດ:' : 'ເລືອກວິຊາທີ່ສອນໄດ້:';
+            }
+        }
+
+        function openUserModal(userId = null) {
+            const modal = document.getElementById('userModal');
+            const title = document.getElementById('userModalTitle');
+            const form = document.getElementById('userForm');
+            const group = document.getElementById('subjectCheckboxGroup');
+
+            form.reset();
+            document.getElementById('modalUserId').value = userId || '';
+
+            let assignedSubs = [];
+
+            if (userId) {
+                const user = users.find(u => u.id === userId);
+                if (!user) return;
+
+                title.innerText = "✏️ ແກ້ໄຂຂໍ້ມູນຜູ້ໃຊ້";
+                document.getElementById('modalUserName').value = user.name;
+                document.getElementById('modalUserRole').value = user.role;
+                document.getElementById('modalUserPin').value = user.pin;
+                assignedSubs = user.managedSubjects || [];
+            } else {
+                title.innerText = "➕ ເພີ່ມຜູ້ໃຊ້ໃໝ່";
+                document.getElementById('modalUserPin').value = "1234";
+            }
+
+            group.innerHTML = subjects.map(s => {
+                const isChecked = assignedSubs.includes(s) ? 'checked' : '';
+                return `
+                    <label class="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
+                        <input type="checkbox" name="userSubjects" value="${s}" ${isChecked} class="rounded text-indigo-600 focus:ring-indigo-500">
+                        <span>${s}</span>
+                    </label>
+                `;
+            }).join('');
+
+            toggleSubjectSelectionUI();
+            modal.classList.remove('hidden');
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.add('hidden');
+        }
+
+        function handleSaveUser(e) {
+            e.preventDefault();
+            const id = document.getElementById('modalUserId').value;
+            const name = document.getElementById('modalUserName').value;
+            const role = document.getElementById('modalUserRole').value;
+            const pin = document.getElementById('modalUserPin').value;
+
+            let selectedSubjects = [];
+            if (role === 'Director' || role === 'Academic') {
+                selectedSubjects = ['ALL'];
+            } else {
+                const checkboxes = document.querySelectorAll('input[name="userSubjects"]:checked');
+                selectedSubjects = Array.from(checkboxes).map(cb => cb.value);
+                if (selectedSubjects.length === 0 && subjects.length > 0) {
+                    selectedSubjects = [subjects[0]];
+                }
+            }
+
+            if (id) {
+                const user = users.find(u => u.id === id);
+                if (user) {
+                    user.name = name;
+                    user.role = role;
+                    user.pin = pin;
+                    user.managedSubjects = selectedSubjects;
+                }
+            } else {
+                users.push({
+                    id: String(Date.now()),
+                    name: name,
+                    role: role,
+                    managedSubjects: selectedSubjects,
+                    pin: pin
+                });
+            }
+
+            saveUsersToStorage();
+            closeUserModal();
+            renderUsersTable();
+            populateUserDropdown();
+            populateFilterDropdowns();
+            alert('💾 ບັນທຶກຂໍ້ມູນຜູ້ໃຊ້ສຳເລັດ!');
+        }
+
+        function deleteUser(userId) {
+            if (confirm('ທ່ານຕ້ອງການລົບຜູ້ໃຊ້ນີ້ແທ້ບໍ?')) {
+                users = users.filter(u => u.id !== userId);
+                saveUsersToStorage();
+                renderUsersTable();
+                populateUserDropdown();
+                populateFilterDropdowns();
+            }
+        }
+
+        function openAddSubjectModal() {
+            const subName = prompt('ໃສ່ຊື່ວິຊາຮຽນໃໝ່:');
+            if (subName && !subjects.includes(subName)) {
+                subjects.push(subName);
+                saveSubjectsToStorage();
+                populateSubjectSelects();
+                populateFilterDropdowns();
+                renderDashboard();
+            }
+        }
+
+        function deleteSubject(subName) {
+            if (confirm(`ທ່ານຕ້ອງການລົບວິຊາ "${subName}" ອອກຈາກລະບົບແທ້ບໍ?`)) {
+                subjects = subjects.filter(s => s !== subName);
+                users.forEach(u => {
+                    if (u.managedSubjects) {
+                        u.managedSubjects = u.managedSubjects.filter(s => s !== subName);
+                    }
+                });
+
+                saveSubjectsToStorage();
+                saveUsersToStorage();
+                populateSubjectSelects();
+                populateFilterDropdowns();
+                renderDashboard();
+            }
+        }
+    </script>
+</body>
+</html>
